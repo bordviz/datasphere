@@ -1,0 +1,19 @@
+package sqlite
+
+import (
+	"database/sql"
+	"fmt"
+)
+
+func New(storagePath string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", storagePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %s", err.Error())
+	}
+
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %s", err.Error())
+	}
+
+	return db, nil
+}
