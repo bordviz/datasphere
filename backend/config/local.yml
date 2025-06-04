@@ -1,0 +1,16 @@
+env: local
+
+database:
+  migrations_path: ./migrations
+  storage_path: ./database/storage.db
+
+http_server:
+  host: localhost
+  port: 8080
+  timeout: 5s
+  idle_timeout: 1m
+
+telegram_bot:
+  token: sdjkadhada
+  channel_id: 231231
+  chunk_size: 15728640
