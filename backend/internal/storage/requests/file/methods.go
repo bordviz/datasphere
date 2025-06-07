@@ -12,6 +12,7 @@ import (
 	"github.com/bordviz/datasphere/internal/lib/customerror"
 	"github.com/bordviz/datasphere/internal/lib/logger/sl"
 	"github.com/bordviz/datasphere/internal/lib/logger/with"
+	"github.com/bordviz/datasphere/internal/lib/nullable"
 )
 
 func (r *FileRequests) CreateFile(ctx context.Context, tx *sql.Tx, model *dto.File, requestID string) (int64, error) {
@@ -32,10 +33,10 @@ func (r *FileRequests) CreateFile(ctx context.Context, tx *sql.Tx, model *dto.Fi
 	if err := tx.QueryRowContext(
 		ctx,
 		q,
-		model.Filename,
-		model.Size,
-		model.Name,
-		model.ChunksCount,
+		nullable.IsNullable(model.Filename),
+		nullable.IsNullable(model.Size),
+		nullable.IsNullable(model.Name),
+		nullable.IsNullable(model.ChunksCount),
 	).Scan(&id); err != nil {
 		if err == sql.ErrNoRows {
 			log.Error("no rows returned when creating new file", sl.Err(err))
@@ -87,7 +88,7 @@ func (r *FileRequests) GetFileByID(ctx context.Context, tx *sql.Tx, id int64, re
 	return &model, nil
 }
 
-func (r *FileRequests) SearchFile(ctx context.Context, tx *sql.Tx, query, requestID string) ([]*models.File, error) {
+func (r *FileRequests) SearchFiles(ctx context.Context, tx *sql.Tx, query, requestID string) ([]*models.File, error) {
 	const op = "storage.requests.file.SearchFile"
 
 	log := with.WithOpAndRequestID(r.log, op, requestID)

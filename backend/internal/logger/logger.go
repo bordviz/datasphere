@@ -12,7 +12,7 @@ func New(env string) (*slog.Logger, error) {
 	log := new(slog.Logger)
 
 	switch env {
-	case "test, disable":
+	case "test", "disable":
 		log = slog.New(slog.DiscardHandler)
 	case "local":
 		log = setupPrettyLogger()

@@ -20,7 +20,7 @@ type Storage struct {
 type FileStorage interface {
 	CreateFile(ctx context.Context, tx *sql.Tx, model *dto.File, requestID string) (int64, error)
 	GetFileByID(ctx context.Context, tx *sql.Tx, id int64, requestID string) (*models.File, error)
-	SearchFile(ctx context.Context, tx *sql.Tx, query, requestID string) ([]*models.File, error)
+	SearchFiles(ctx context.Context, tx *sql.Tx, query, requestID string) ([]*models.File, error)
 	DeleteFile(ctx context.Context, tx *sql.Tx, id int64, requestID string) (int64, error)
 }
 
