@@ -7,6 +7,7 @@ import (
 	"github.com/bordviz/datasphere/internal/config"
 	"github.com/bordviz/datasphere/internal/lib/logger/sl"
 	"github.com/bordviz/datasphere/internal/logger"
+	"github.com/bordviz/datasphere/internal/storage"
 	"github.com/bordviz/datasphere/internal/storage/migrations"
 	"github.com/bordviz/datasphere/internal/storage/sqlite"
 )
@@ -34,7 +35,6 @@ func main() {
 		log.Error("failed to connect to database", sl.Err(err))
 		os.Exit(1)
 	}
-	_ = db
 
 	migrationsHandler, err := migrations.NewMigrationHandler(cfg.StoragePath, cfg.MigrationsPath)
 	if err != nil {
@@ -46,4 +46,9 @@ func main() {
 		log.Error("failed to apply migrations", sl.Err(err))
 		os.Exit(1)
 	}
+
+	storage := storage.New(log)
+	_ = db
+	_ = storage
+
 }
