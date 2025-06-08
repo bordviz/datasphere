@@ -17,7 +17,7 @@ var st *suite.Suite
 
 func TestInitSuite(t *testing.T) {
 	var err error
-	st, err = suite.New(t, 3)
+	st, err = suite.New(t, 3, true)
 	require.NoError(t, err)
 }
 
@@ -117,9 +117,9 @@ func TestCreateFile(t *testing.T) {
 
 			id, err := st.Storage.CreateFile(ctx, tx, model, tt.name)
 			require.Equal(t, tt.err, err)
+			require.Equal(t, tt.expected, id)
 
 			if err == nil {
-				require.Equal(t, tt.expected, id)
 				err = tx.Commit()
 				require.NoError(t, err)
 			}

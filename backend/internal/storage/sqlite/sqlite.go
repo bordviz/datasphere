@@ -17,5 +17,9 @@ func New(storagePath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %s", err.Error())
 	}
 
+	if _, err = db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
+		return nil, fmt.Errorf("failed to turn on foreign keys: %s", err.Error())
+	}
+
 	return db, nil
 }

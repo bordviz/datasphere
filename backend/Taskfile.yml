@@ -1,0 +1,10 @@
+version: "3"
+
+tasks:
+  test:
+    description: "Run tests"
+    cmds:
+      - go clean -testcache
+      - go test -v ./test/storage/file/file_test.go
+      - go test -v ./test/storage/chunk/chunk_test.go
+

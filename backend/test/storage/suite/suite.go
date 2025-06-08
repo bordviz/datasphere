@@ -20,7 +20,7 @@ type Suite struct {
 
 const configPath = "config/test.yml"
 
-func New(t *testing.T, upLevel int) (*Suite, error) {
+func New(t *testing.T, upLevel int, clearDatabase bool) (*Suite, error) {
 	t.Helper()
 
 	cfg, err := config.LoadConfigFromPath(strings.Repeat("../", upLevel) + configPath)
@@ -43,8 +43,10 @@ func New(t *testing.T, upLevel int) (*Suite, error) {
 		return nil, fmt.Errorf("failed to create migrations handler: %s", err.Error())
 	}
 
-	if err := migrationsHandler.Down(); err != nil {
-		return nil, fmt.Errorf("failed to revert migrations: %s", err.Error())
+	if clearDatabase {
+		if err := migrationsHandler.Down(); err != nil {
+			return nil, fmt.Errorf("failed to revert migrations: %s", err.Error())
+		}
 	}
 
 	if err := migrationsHandler.Up(); err != nil {

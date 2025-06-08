@@ -11,6 +11,7 @@ import (
 	"github.com/bordviz/datasphere/internal/lib/customerror"
 	"github.com/bordviz/datasphere/internal/lib/logger/sl"
 	"github.com/bordviz/datasphere/internal/lib/logger/with"
+	"github.com/bordviz/datasphere/internal/lib/nullable"
 )
 
 func (r *ChunkRequests) CreateChunk(ctx context.Context, tx *sql.Tx, model *dto.Chunk, requestID string) (int64, error) {
@@ -22,7 +23,7 @@ func (r *ChunkRequests) CreateChunk(ctx context.Context, tx *sql.Tx, model *dto.
 
 	q := `
 		INSERT INTO chunk
-		(file_id, chunk_number, file)
+		(file_id, chunk_number, file_key)
 		VALUES ($1, $2, $3)
 		RETURNING id;
 	`
@@ -31,9 +32,9 @@ func (r *ChunkRequests) CreateChunk(ctx context.Context, tx *sql.Tx, model *dto.
 	if err := tx.QueryRowContext(
 		ctx,
 		q,
-		model.FileID,
-		model.ChunkNumber,
-		model.File,
+		nullable.IsNullable(model.FileID),
+		nullable.IsNullable(model.ChunkNumber),
+		nullable.IsNullable(model.FileKey),
 	).Scan(&id); err != nil {
 		if err == sql.ErrNoRows {
 			log.Error("no rows returned when creating new chunk", sl.Err(err))
@@ -47,21 +48,57 @@ func (r *ChunkRequests) CreateChunk(ctx context.Context, tx *sql.Tx, model *dto.
 	return id, nil
 }
 
-func (r *ChunkRequests) GetFileChunks(ctx context.Context, tx *sql.Tx, file, limit, offset int64, requestID string) (*models.FileChunks, error) {
+func (r *ChunkRequests) getFileChunksCount(ctx context.Context, tx *sql.Tx, fileKey int64, requestID string) (int64, error) {
+	const op = "storage.requests.chunk.getFileChunksCount"
+
+	log := with.WithOpAndRequestID(r.log, op, requestID)
+
+	log.Debug("get file chunks count", slog.Int64("file_key", fileKey))
+
+	q := `
+		SELECT COUNT(*)
+		FROM chunk
+		WHERE file_key = $1;
+	`
+
+	var count int64
+	if err := tx.QueryRowContext(ctx, q, fileKey).Scan(&count); err != nil {
+		log.Error("failed to get file chunks count", sl.Err(err))
+		return 0, customerror.NewCustomError(fmt.Sprintf("failed to get file chunks count: %s", err.Error()), 400)
+	}
+
+	if count == 0 {
+		log.Error("file chunks not found")
+		return 0, customerror.NewCustomError("file chunks not found", 404)
+	}
+
+	log.Debug("file chunks count fetched successfully", slog.Int64("count", count))
+	return count, nil
+}
+
+func (r *ChunkRequests) GetFileChunks(ctx context.Context, tx *sql.Tx, fileKey, limit, offset int64, requestID string) (*models.FileChunks, error) {
 	const op = "storage.requests.chunk.GetFileChunks"
 
 	log := with.WithOpAndRequestID(r.log, op, requestID)
 
+	log.Debug("get file chunks", slog.Int64("file_key", fileKey), slog.Int64("limit", limit), slog.Int64("offset", offset))
+
 	q := `
-		SELECT COUNT(*) AS count, id, file_id, chunk_number, file
+		SELECT id, file_id, chunk_number, file_key
 		FROM chunk
-		WHERE file = $1
+		WHERE file_key = $1
 		ORDER BY chunk_number
 		LIMIT $2 OFFSET $3;
 	`
 
 	var res models.FileChunks
-	rows, err := tx.QueryContext(ctx, q, file, limit, offset)
+	count, err := r.getFileChunksCount(ctx, tx, fileKey, requestID)
+	if err != nil {
+		return nil, err
+	}
+	res.Count = count
+
+	rows, err := tx.QueryContext(ctx, q, fileKey, limit, offset)
 	if err != nil {
 		log.Error("failed to get file chunks", sl.Err(err))
 		return nil, customerror.NewCustomError(fmt.Sprintf("failed to get file chunks: %s", err.Error()), 400)
@@ -70,19 +107,16 @@ func (r *ChunkRequests) GetFileChunks(ctx context.Context, tx *sql.Tx, file, lim
 
 	for rows.Next() {
 		var model models.Chunk
-		var count int64
 
 		if err := rows.Scan(
-			&count,
+			&model.ID,
 			&model.FileID,
 			&model.ChunkNumber,
-			&model.File,
+			&model.FileKey,
 		); err != nil {
 			log.Error("failed to get scan file chunk", sl.Err(err))
 			return nil, customerror.NewCustomError(fmt.Sprintf("failed to get scan file chunk: %s", err.Error()), 400)
 		}
-
-		res.Count = count
 		res.Chunks = append(res.Chunks, &model)
 	}
 

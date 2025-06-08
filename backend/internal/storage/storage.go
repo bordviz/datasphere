@@ -26,7 +26,7 @@ type FileStorage interface {
 
 type ChunkStorage interface {
 	CreateChunk(ctx context.Context, tx *sql.Tx, model *dto.Chunk, requestID string) (int64, error)
-	GetFileChunks(ctx context.Context, tx *sql.Tx, file, limit, offset int64, requestID string) (*models.FileChunks, error)
+	GetFileChunks(ctx context.Context, tx *sql.Tx, fileKey, limit, offset int64, requestID string) (*models.FileChunks, error)
 }
 
 func New(log *slog.Logger) *Storage {
